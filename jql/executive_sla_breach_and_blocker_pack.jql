@@ -1,0 +1,52 @@
+-- ============================================================================
+-- ENTERPRISE JIRA CLOUD JQL SAVED FILTER PACK (EXECUTIVE SLA & PMO GOVERNANCE)
+-- Author: Samuel Chinwendu Agu - Lead Technical Consultant & Solutions Architect
+-- Target Environment: Jira Cloud (Software + Jira Service Management)
+-- ============================================================================
+
+-- [FILTER-01] Stalled Sprint Blockers (> 24 Hours Without Update)
+-- Purpose: Surfaces High/Highest priority issues in the active sprint that are 
+-- flagged, blocked, or untouched for more than 24 hours.
+project IN ("ENG", "OPS") 
+AND sprint IN openSprints() 
+AND (status = "Blocked" OR Flagged IS NOT EMPTY OR priority IN (Highest, High)) 
+AND statusCategory != Done 
+AND updated <= -24h 
+ORDER BY priority DESC, updated ASC
+
+-- [FILTER-02] JSM Critical SLA Breach Imminent (< 2 Hours Remaining)
+-- Purpose: Alerts IT and Customer Support leads before a P1/P2 ticket breaches 
+-- contractual Time to Resolution or Time to First Response SLAs.
+project = "SUP" 
+AND statusCategory != Done 
+AND priority IN (Highest, High) 
+AND ("Time to resolution" < remaining("2h") OR "Time to first response" < remaining("30m")) 
+ORDER BY "Time to resolution" ASC, priority DESC
+
+-- [FILTER-03] Active Sprint Scope-Creep & Unestimated Story Hygiene Audit
+-- Purpose: Detects work items injected into an active sprint without story point 
+-- estimates or parent Epic linkage (violating Definition of Ready).
+project = "ENG" 
+AND sprint IN openSprints() 
+AND issuetype IN (Story, Task) 
+AND statusCategory != Done 
+AND ("Story Points" IS EMPTY OR parent IS EMPTY) 
+ORDER BY created DESC, priority DESC
+
+-- [FILTER-04] Executive Epic Release Readiness & Open Dependency Rollup
+-- Purpose: Tracks open bugs and unresolved child issues blocking upcoming version releases.
+project = "ENG" 
+AND fixVersion in unreleasedVersions() 
+AND statusCategory IN ("To Do", "In Progress") 
+AND issuetype IN (Bug, Story, Task) 
+ORDER BY fixVersion ASC, priority DESC, status ASC
+
+-- [FILTER-05] Ghost Queue Leakage Detector (Unassigned High-Urgency Work)
+-- Purpose: Prevents high-priority customer or engineering tickets from sitting 
+-- unowned in intake queues for more than 2 hours.
+project IN ("ENG", "SUP", "OPS") 
+AND assignee IS EMPTY 
+AND priority IN (Highest, High) 
+AND statusCategory = "To Do" 
+AND created <= -2h 
+ORDER BY priority DESC, created ASC
