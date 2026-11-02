@@ -1,0 +1,37 @@
+{
+  "architecture_name": "Enterprise Jira Blocked-Status Escalation & Rovo AI Triage Spec",
+  "author": "Samuel Chinwendu Agu - Lead Technical Consultant & Solutions Architect",
+  "platform": "Atlassian Cloud (Jira + Confluence + JSM + Atlassian Rovo + Atlassian Guard)",
+  "governance_controls": {
+    "organization_admin_portal": "admin.atlassian.com",
+    "identity_and_security": "Atlassian Guard (SAML SSO + Enforced 2FA + SCIM Lifecycle Provisioning)",
+    "subscription_tier_target": "Premium / Enterprise (99.9%+ Uptime SLA, Unlimited Storage, Sandbox + Release Tracks)"
+  },
+  "automation_rules": [
+    {
+      "rule_id": "AUTO-PMO-01",
+      "rule_name": "24-Hour Stalled Blocker Escalation Gate",
+      "trigger": {
+        "type": "Scheduled JQL Execution",
+        "cron_schedule": "0 0 9,14 * * MON-FRI",
+        "jql_filter": "project IN ('ENG', 'OPS') AND sprint IN openSprints() AND status = 'Blocked' AND updated <= -24h"
+      },
+      "conditions": [
+        "Issue statusCategory != Done",
+        "Custom Field 'Accountable Owner (RACI)' IS NOT EMPTY"
+      ],
+      "actions": [
+        "Add automated comment tagging {{issue.Accountable Owner}} and {{issue.project.lead}} requesting root-cause unblock ETA",
+        "Set label 'SLA-ESCALATED-24H'",
+        "Link issue via Smart Link to Confluence RAID Log page"
+      ]
+    },
+    {
+      "rule_id": "ROVO-AI-02",
+      "rule_name": "Rovo Agent Backlog Readiness & Release Notes Skill",
+      "invocation_method": "Rovo Chat @mention (@Backlog-Governance-Agent) or inline /rovo command",
+      "permission_boundary": "Strictly enforces underlying Jira and Confluence user permission schemes",
+      "human_in_the_loop_gate": "Write/Mutate actions require explicit user confirmation on Action Card before modifying Jira fields"
+    }
+  ]
+}
